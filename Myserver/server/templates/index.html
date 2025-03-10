@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>File Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body class="bg-light">
+
+    <div class="container mt-4">
+        <h2 class="text-center">File Manager</h2>
+
+        <!-- File Upload Form -->
+        <div class="card p-3 my-3">
+            <h5>Upload a File</h5>
+            <form id="uploadForm">
+                <input type="file" id="fileInput" class="form-control mb-2">
+                <button type="submit" class="btn btn-primary">Upload</button>
+            </form>
+        </div>
+
+        <!-- Create File/Folder Form -->
+        <div class="card p-3 my-3">
+            <h5>Create a File or Folder</h5>
+            <input type="text" id="newItemName" class="form-control mb-2" placeholder="Enter name">
+            <select id="itemType" class="form-select mb-2">
+                <option value="file">File</option>
+                <option value="directory">Folder</option>
+            </select>
+            <button onclick="createItem()" class="btn btn-success">Create</button>
+        </div>
+
+        <!-- File List -->
+        <div class="card p-3">
+            <h5>Files and Folders</h5>
+            <ul id="fileList" class="list-group"></ul>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function () {
+            loadFiles();
+
+            // File Upload
+            $("#uploadForm").submit(function (e) {
+                e.preventDefault();
+                let fileInput = $("#fileInput")[0].files[0];
+                if (!fileInput) {
+                    alert("Please select a file to upload.");
+                    return;
+                }
+                let formData = new FormData();
+                formData.append("file", fileInput);
+
+                $.ajax({
+                    url: "/upload",
+                    type: "POST",
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function (response) {
+                        alert(response.message);
+                        loadFiles();
+                    },
+                    error: function (xhr) {
+                        alert("Upload failed: " + xhr.responseJSON.error);
+                    }
+                });
+            });
+        });
+
+        function loadFiles(path = "") {
+    $.get("/list?path=" + encodeURIComponent(path), function (data) {
+        let fileList = $("#fileList");
+        fileList.empty();
+        // Add "Back" button if inside a subfolder
+        if (path) {
+            let parentFolder = path.split("/").slice(0, -1).join("/");
+            fileList.append(`
+                <li class="list-group-item">
+                    <button onclick="loadFiles('${parentFolder}')" class="btn btn-secondary btn-sm">⬅ Back</button>
+                </li>
+            `);
+        }
+
+        // List files & folders
+        data.forEach(item => {
+            // console.log(item);
+            // console.log(item.path);
+            //  item.path = path + "/" + item.name;
+            let icon = item.is_directory ? "📁" : "📄";
+            let actions = `
+                <button onclick="deleteItem('${item.path}')" class="btn btn-danger btn-sm mx-1">Delete</button>
+                <button onclick="renameItem('${item.path}')" class="btn btn-warning btn-sm mx-1">Rename</button>
+            `;
+            if (!item.is_directory) {
+                actions += `<button onclick="downloadFile('${item.path}')" class="btn btn-info btn-sm mx-1">Download</button>`;
+            }
+
+            // If it's a folder, make it clickable to open
+            let itemHtml = `
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span ${item.is_directory ? `style="cursor:pointer" onclick="loadFiles('${item.path}')"` : ""}>
+                        ${icon} ${item.name}
+                    </span>
+                    <div>${actions}</div>
+                </li>
+            `;
+            fileList.append(itemHtml);
+        });
+    });
+}
+
+
+        function createItem() {
+            let name = $("#newItemName").val();
+            let type = $("#itemType").val();
+            if (!name) {
+                alert("Please enter a name.");
+                return;
+            }
+
+            $.ajax({
+                url: "/create",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({ name: name, type: type }),
+                success: function (response) {
+                    alert(response.message);
+                    loadFiles();
+                },
+                error: function (xhr) {
+                    alert("Error: " + xhr.responseJSON.error);
+                }
+            });
+        }
+
+        function deleteItem(path) {
+            if (!confirm("Are you sure you want to delete this?")) return;
+            $.ajax({
+                url: "/delete",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({ path: path }),
+                success: function (response) {
+                    alert(response.message);
+                    loadFiles();
+                },
+                error: function (xhr) {
+                    alert("Error: " + xhr.responseJSON.error);
+                }
+            });
+        }
+
+        function renameItem(oldPath) {
+            let newName = prompt("Enter new name:");
+            if (!newName) return;
+
+            $.ajax({
+                url: "/rename",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({ old_path: oldPath, new_name: newName }),
+                success: function (response) {
+                    alert(response.message);
+                    loadFiles();
+                },
+                error: function (xhr) {
+                    alert("Error: " + xhr.responseJSON.error);
+                }
+            });
+        }
+
+        function downloadFile(path) {
+            window.location.href = "/download?path=" + encodeURIComponent(path);
+        }
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
