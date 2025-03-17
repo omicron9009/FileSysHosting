@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>File Hosting System</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: Arial, sans-serif;
+        }
+
+        .card {
+            border: none;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transition: transform 0.2s ease;
+            border-radius: 12px;
+        }
+
+        .card:hover {
+            transform: translateY(-3px);
+        }
+
+        .file-link {
+            color: #007bff;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+
+        .file-link:hover {
+            color: #0056b3;
+            text-decoration: underline;
+        }
+
+        .btn-icon {
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 8px;
+            transition: background-color 0.2s ease;
+        }
+
+        .btn-outline-primary:hover {
+            background-color: #007bff;
+            color: #fff;
+        }
+
+        .btn-outline-danger:hover {
+            background-color: #dc3545;
+            color: #fff;
+        }
+
+        .btn-outline-warning:hover {
+            background-color: #ffc107;
+            color: #000;
+        }
+
+        .form-control, .btn {
+            border-radius: 20px;
+        }
+
+        h2 {
+            font-weight: bold;
+            color: #343a40;
+        }
+    </style>
+</head>
+<body>
+<div class="container mt-5">
+    <h2 class="mb-4">📁 File Hosting System</h2>
+
+    <!-- 🔍 Search -->
+    <form action="{{ url_for('search') }}" method="GET" class="input-group mb-4">
+        <input type="text" name="query" class="form-control" placeholder="Search files and folders..." required>
+        <div class="input-group-append">
+            <button type="submit" class="btn btn-primary">🔍</button>
+        </div>
+    </form>
+
+    <!-- 📤 Upload -->
+    <form action="{{ url_for('upload_file', folder_path=current_path) }}" method="POST" enctype="multipart/form-data" class="mb-4">
+        <div class="input-group">
+            <input type="file" name="file" class="form-control" required>
+            <div class="input-group-append">
+                <button type="submit" class="btn btn-success">Upload</button>
+            </div>
+        </div>
+    </form>
+
+    <!-- 📂 Create Folder -->
+    <form action="{{ url_for('create_folder', folder_path=current_path) }}" method="POST" class="mb-4">
+        <div class="input-group">
+            <input type="text" name="folder_name" class="form-control" placeholder="New folder name..." required>
+            <div class="input-group-append">
+                <button type="submit" class="btn btn-warning">Create Folder</button>
+            </div>
+        </div>
+    </form>
+
+    <!-- 📁 List Files and Folders -->
+    <div class="row">
+        {% for item in items %}
+            <div class="col-md-4 mb-3">
+                <div class="card">
+                    <div class="card-body d-flex justify-content-between align-items-center">
+                        <div>
+                            {% if '.' in item %}
+                                <span class="file-link">{{ item }}</span>
+                            {% else %}
+                                <a href="{{ url_for('index', folder_path=current_path + '/' + item) }}" class="file-link">
+                                    {{ item }}/
+                                </a>
+                            {% endif %}
+                        </div>
+                        <div class="d-flex">
+                            <!-- ⬇️ Download Button -->
+                            <a href="{{ url_for('download_item', item_path=current_path + '/' + item) }}" class="btn btn-outline-primary btn-icon mr-2">
+                                ⬇️
+                            </a>
+                            <!-- 🗑️ Delete Button -->
+                            <form action="{{ url_for('delete_item', item_path=current_path + '/' + item) }}" method="POST">
+                                <button type="submit" class="btn btn-outline-danger btn-icon">🗑️</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+</body>
+</html>
